@@ -1,5 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { Plus, ChevronDown, ArrowUp, X, FileText, Loader2, Check, Archive } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useRouter, usePathname } from "next/navigation";
 
 /* --- ICONS --- */
 export const Icons = {
@@ -65,7 +67,7 @@ const FilePreviewCard: React.FC<FilePreviewCardProps> = ({ file, onRemove }) => 
     const isImage = file.type.startsWith("image/") && file.preview;
 
     return (
-        <div className={`relative group flex-shrink-0 w-24 h-24 rounded-xl overflow-hidden border border-bg-300 bg-bg-200 animate-fade-in transition-all hover:border-text-400`}>
+        <div className={`relative group shrink-0 w-24 h-24 rounded-xl overflow-hidden border border-bg-300 bg-bg-200 animate-fade-in transition-all hover:border-text-400`}>
             {isImage ? (
                 <div className="w-full h-full relative">
                     <img src={file.preview!} alt={file.file.name} className="w-full h-full object-cover" />
@@ -122,9 +124,9 @@ interface PastedContentCardProps {
 
 const PastedContentCard: React.FC<PastedContentCardProps> = ({ content, onRemove }) => {
     return (
-        <div className="relative group flex-shrink-0 w-28 h-28 rounded-2xl overflow-hidden border border-[#E5E5E5] dark:border-[#30302E] bg-white dark:bg-[#20201F] animate-fade-in p-3 flex flex-col justify-between shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
+        <div className="relative group shrink-0 w-28 h-28 rounded-2xl overflow-hidden border border-[#E5E5E5] dark:border-[#30302E] bg-white dark:bg-[#20201F] animate-fade-in p-3 flex flex-col justify-between shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
             <div className="overflow-hidden w-full">
-                <p className="text-[10px] text-[#9CA3AF] leading-[1.4] font-mono break-words whitespace-pre-wrap line-clamp-4 select-none">
+                <p className="text-[10px] text-[#9CA3AF] leading-[1.4] font-mono wrap-break-word whitespace-pre-wrap line-clamp-4 select-none">
                     {content.content}
                 </p>
             </div>
@@ -145,101 +147,7 @@ const PastedContentCard: React.FC<PastedContentCardProps> = ({ content, onRemove
     );
 };
 
-// 3. Model Selector
-interface Model {
-    id: string;
-    name: string;
-    description: string;
-    badge?: string;
-}
 
-interface ModelSelectorProps {
-    models: Model[];
-    selectedModel: string;
-    onSelect: (modelId: string) => void;
-}
-
-const ModelSelector: React.FC<ModelSelectorProps> = ({ models, selectedModel, onSelect }) => {
-    const [isOpen, setIsOpen] = useState(false);
-    const dropdownRef = useRef<HTMLDivElement>(null);
-
-    const currentModel = models.find(m => m.id === selectedModel) || models[0];
-
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-                setIsOpen(false);
-            }
-        };
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, []);
-
-    return (
-        <div className="relative" ref={dropdownRef}>
-            <button
-                onClick={() => setIsOpen(!isOpen)}
-                className={`inline-flex items-center justify-center relative shrink-0 transition font-base duration-300 ease-[cubic-bezier(0.165,0.85,0.45,1)] h-8 rounded-xl px-3 min-w-[4rem] active:scale-[0.98] whitespace-nowrap !text-xs pl-2.5 pr-2 gap-1 
-                ${isOpen
-                        ? 'bg-bg-200 text-text-100 dark:bg-[#454540] dark:text-[#ECECEC]'
-                        : 'text-text-300 hover:text-text-200 hover:bg-bg-200 dark:text-[#B4B4B4] dark:hover:text-[#ECECEC] dark:hover:bg-[#454540]'}`}
-            >
-                <div className="font-ui inline-flex gap-[3px] text-[14px] h-[14px] leading-none items-baseline">
-                    <div className="flex items-center gap-[4px]">
-                        <div className="whitespace-nowrap select-none font-medium">{currentModel.name}</div>
-                    </div>
-                </div>
-                <div className="flex items-center justify-center opacity-75" style={{ width: '20px', height: '20px' }}>
-                    <Icons.SelectArrow className={`shrink-0 opacity-75 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
-                </div>
-            </button>
-
-            {isOpen && (
-                <div className="absolute bottom-full right-0 mb-2 w-[260px] bg-white dark:bg-[#212121] border border-[#DDDDDD] dark:border-[#30302E] rounded-2xl shadow-2xl overflow-hidden z-50 flex flex-col p-1.5 animate-fade-in origin-bottom-right">
-                    {models.map(model => (
-                        <button
-                            key={model.id}
-                            onClick={() => {
-                                onSelect(model.id);
-                                setIsOpen(false);
-                            }}
-                            className={`w-full text-left px-3 py-2.5 rounded-xl flex items-start justify-between group transition-colors hover:bg-bg-200 dark:hover:bg-[#30302E]`}
-                        >
-                            <div className="flex flex-col gap-0.5">
-                                <div className="flex items-center gap-2">
-                                    <span className="text-[13px] font-semibold text-text-100 dark:text-[#ECECEC]">
-                                        {model.name}
-                                    </span>
-                                    {model.badge && (
-                                        <span className={`px-1.5 py-[1px] rounded-full text-[10px] font-medium border ${model.badge === 'Upgrade'
-                                            ? 'border-blue-200 text-blue-600 bg-white dark:border-blue-500/30 dark:text-blue-400 dark:bg-blue-500/10'
-                                            : 'border-bg-300 text-text-300'
-                                            }`}>
-                                            {model.badge}
-                                        </span>
-                                    )}
-                                </div>
-                                <span className="text-[11px] text-text-300 dark:text-[#999999]">
-                                    {model.description}
-                                </span>
-                            </div>
-                            {selectedModel === model.id && (
-                                <Icons.Check className="w-4 h-4 text-blue-600 dark:text-blue-400 mt-1" />
-                            )}
-                        </button>
-                    ))}
-
-                    <div className="h-px bg-bg-300 dark:bg-[#30302E] my-1 mx-2" />
-
-                    <button className="w-full text-left px-3 py-2.5 rounded-xl flex items-center justify-between group transition-colors hover:bg-bg-200 dark:hover:bg-[#30302E] text-text-100 dark:text-[#ECECEC]">
-                        <span className="text-[13px] font-semibold">More models</span>
-                        <Icons.SelectArrow className="w-4 h-4 -rotate-90 text-text-300 dark:text-[#999999]" />
-                    </button>
-                </div>
-            )}
-        </div>
-    );
-};
 
 // 4. Main Chat Input Component
 interface ClaudeChatInputProps {
@@ -247,27 +155,23 @@ interface ClaudeChatInputProps {
         message: string;
         files: AttachedFile[];
         pastedContent: any[];
-        model: string;
         isThinkingEnabled: boolean;
     }) => void;
 }
 
 export const ClaudeChatInput: React.FC<ClaudeChatInputProps> = ({ onSendMessage }) => {
+    const { isAuthenticated, setRedirectPath } = useAuth();
+    const router = useRouter();
+    const pathname = usePathname();
+
     const [message, setMessage] = useState("");
     const [files, setFiles] = useState<AttachedFile[]>([]);
     const [pastedContent, setPastedContent] = useState<any[]>([]);
     const [isDragging, setIsDragging] = useState(false);
-    const [selectedModel, setSelectedModel] = useState("sonnet-4.5");
     const [isThinkingEnabled, setIsThinkingEnabled] = useState(false);
 
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
-
-    const models = [
-        { id: "opus-4.5", name: "Opus 4.5", description: "Most capable for complex work" },
-        { id: "sonnet-4.5", name: "Sonnet 4.5", description: "Best for everyday tasks" },
-        { id: "haiku-4.5", name: "Haiku 4.5", description: "Fastest for quick answers" }
-    ];
 
     // Auto-resize textarea
     useEffect(() => {
@@ -356,11 +260,17 @@ export const ClaudeChatInput: React.FC<ClaudeChatInputProps> = ({ onSendMessage 
 
     const handleSend = () => {
         if (!message.trim() && files.length === 0 && pastedContent.length === 0) return;
+
+        if (!isAuthenticated) {
+            setRedirectPath(pathname);
+            router.push("/auth");
+            return;
+        }
+
         onSendMessage({
             message,
             files,
             pastedContent,
-            model: selectedModel,
             isThinkingEnabled
         });
         setMessage("");
@@ -387,7 +297,7 @@ export const ClaudeChatInput: React.FC<ClaudeChatInputProps> = ({ onSendMessage 
         >
             {/* Main Container */}
             <div className={`
-                !box-content flex flex-col mx-2 md:mx-0 items-stretch transition-all duration-200 relative z-10 rounded-2xl cursor-text border border-bg-300 dark:border-transparent 
+                box-content! flex flex-col mx-2 md:mx-0 items-stretch transition-all duration-200 relative z-10 rounded-2xl cursor-text border border-bg-300 dark:border-transparent 
                 shadow-[0_0_15px_rgba(0,0,0,0.08)] hover:shadow-[0_0_20px_rgba(0,0,0,0.12)]
                 focus-within:shadow-[0_0_25px_rgba(0,0,0,0.15)]
                 bg-white dark:bg-[#30302E] font-sans antialiased
@@ -417,7 +327,7 @@ export const ClaudeChatInput: React.FC<ClaudeChatInputProps> = ({ onSendMessage 
 
                     {/* 2. Input Area */}
                     <div className="relative mb-1">
-                        <div className="max-h-96 w-full overflow-y-auto custom-scrollbar font-sans break-words transition-opacity duration-200 min-h-[2.5rem] px-1">
+                        <div className="max-h-96 w-full overflow-y-auto custom-scrollbar font-sans wrap-break-word transition-opacity duration-200 min-h-10 px-1">
                             <textarea
                                 ref={textareaRef}
                                 value={message}
@@ -446,7 +356,7 @@ export const ClaudeChatInput: React.FC<ClaudeChatInputProps> = ({ onSendMessage 
                                 <Icons.Plus className="w-5 h-5" />
                             </button>
 
-                            <div className="flex shrink min-w-8 !shrink-0">
+                            <div className="flex shrink-0! min-w-8">
                                 <button
                                     onClick={() => setIsThinkingEnabled(!isThinkingEnabled)}
                                     className={`transition-all duration-200 h-8 w-8 flex items-center justify-center rounded-lg active:scale-95
@@ -465,11 +375,6 @@ export const ClaudeChatInput: React.FC<ClaudeChatInputProps> = ({ onSendMessage 
                         {/* Right Tools */}
                         <div className="flex flex-row items-center min-w-0 gap-1">
                             <div className="shrink-0 p-1 -m-1">
-                                <ModelSelector
-                                    models={models}
-                                    selectedModel={selectedModel}
-                                    onSelect={setSelectedModel}
-                                />
                             </div>
 
                             <div>
@@ -477,7 +382,7 @@ export const ClaudeChatInput: React.FC<ClaudeChatInputProps> = ({ onSendMessage 
                                     onClick={handleSend}
                                     disabled={!hasContent}
                                     className={`
-                                        inline-flex items-center justify-center relative shrink-0 transition-colors h-8 w-8 rounded-md active:scale-95 !rounded-xl !h-8 !w-8
+                                        inline-flex items-center justify-center relative shrink-0 transition-colors rounded-xl h-8 w-8 active:scale-95
                                         ${hasContent
                                             ? 'bg-accent text-bg-0 hover:bg-accent-hover shadow-md'
                                             : 'bg-accent/30 text-bg-0/60 cursor-default'}
