@@ -417,7 +417,7 @@ export const ClaudeChatInput: React.FC<ClaudeChatInputProps> = ({ onSendMessage 
 
                     {/* 2. Input Area */}
                     <div className="relative mb-1">
-                        <div className="max-h-96 w-full overflow-y-auto custom-scrollbar font-sans break-words transition-opacity duration-200 min-h-[2.5rem] pl-1">
+                        <div className="max-h-96 w-full overflow-y-auto custom-scrollbar font-sans break-words transition-opacity duration-200 min-h-[2.5rem] px-1">
                             <textarea
                                 ref={textareaRef}
                                 value={message}
@@ -425,7 +425,7 @@ export const ClaudeChatInput: React.FC<ClaudeChatInputProps> = ({ onSendMessage 
                                 onPaste={handlePaste}
                                 onKeyDown={handleKeyDown}
                                 placeholder="How can I help you today?"
-                                className="w-full bg-transparent border-0 outline-none text-text-100 text-[16px] placeholder:text-text-400 resize-none overflow-hidden py-0 leading-relaxed block font-normal antialiased"
+                                className="w-full bg-transparent border-0 outline-none text-text-100 text-[16px] placeholder:text-text-400 resize-none overflow-hidden py-2 px-3 leading-relaxed block font-normal antialiased"
                                 rows={1}
                                 autoFocus
                                 style={{ minHeight: '1.5em' }}

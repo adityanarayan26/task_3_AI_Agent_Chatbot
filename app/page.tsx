@@ -33,11 +33,11 @@ const ChatboxDemo = () => {
     const userName = 'Saify';
 
     return (
-        <div className="min-h-screen w-full bg-[#fcfcf9] dark:bg-[#202123] flex flex-col items-center justify-center p-4 font-sans text-text-100 transition-colors duration-200">
+        <div className="min-h-screen w-full bg-background flex flex-col items-center justify-center p-4 font-sans text-text-100 transition-colors duration-200">
 
             {/* Greeting Section */}
             <div className="w-full max-w-3xl mb-8 sm:mb-12 text-center animate-fade-in">
-                <div className="w-24 h-24 mx-auto mb-6 flex items-center justify-center">
+                <div className="w-24 h-24 mb-6 flex items-center justify-center mx-auto" style={{ margin: '0 auto 1.5rem auto' }}>
                     <img src="https://4say.site/claude.png" alt="Logo" className="w-full h-full object-contain" />
                 </div>
                 <h1 className="text-3xl sm:text-4xl font-serif font-light text-text-200 mb-3 tracking-tight">
