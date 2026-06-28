@@ -122,11 +122,23 @@ export class AiService {
                 action: {
                   type: Type.STRING,
                   description: 'The type of action to perform.',
-                  enum: ['generate', 'debug', 'explain', 'refactor']
+                  enum: ['generate', 'debug', 'explain', 'refactor', 'draft_project']
                 },
                 language: { type: Type.STRING, description: 'The programming language of the code.' },
                 code: { type: Type.STRING, description: 'The code content.' },
-                explanation: { type: Type.STRING, description: 'Optional explanation, context, or notes.' }
+                explanation: { type: Type.STRING, description: 'Optional explanation, context, or notes.' },
+                files: {
+                  type: Type.ARRAY,
+                  description: 'List of files with path and content (use for multi-file project drafting).',
+                  items: {
+                    type: Type.OBJECT,
+                    properties: {
+                      path: { type: Type.STRING, description: 'Relative path of the file under the sandbox folder.' },
+                      content: { type: Type.STRING, description: 'Content of the file.' }
+                    },
+                    required: ['path', 'content']
+                  }
+                }
               },
               required: ['action', 'language', 'code']
             }
@@ -210,7 +222,8 @@ export class AiService {
                 action: codingArgs.action,
                 language: codingArgs.language,
                 code: codingArgs.code,
-                explanation: codingArgs.explanation
+                explanation: codingArgs.explanation,
+                files: codingArgs.files
               });
             } else {
               result = { error: 'Unknown tool requested.' };
