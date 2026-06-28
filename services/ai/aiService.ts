@@ -277,10 +277,12 @@ ${scrapeRes.textContent.slice(0, 3000)}
       };
     }
 
+    const orModel = process.env.OPENROUTER_MODEL || 'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free';
+
     steps.push({
       type: 'thought',
       title: 'OpenRouter Fallback',
-      content: 'Invoking the fallback reasoning model on OpenRouter (nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free)...'
+      content: `Invoking the fallback reasoning model on OpenRouter (${orModel})...`
     });
 
     try {
@@ -312,7 +314,7 @@ ${scrapeRes.textContent.slice(0, 3000)}
       });
 
       const completion = await openai.chat.completions.create({
-        model: 'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free',
+        model: orModel,
         messages
       });
 
