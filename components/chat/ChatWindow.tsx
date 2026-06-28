@@ -1,6 +1,36 @@
 import React, { useState } from 'react';
 import { Bot, User, ChevronDown, ChevronRight, Terminal, Eye, EyeOff, Search, FileCode2, Play, AlertCircle } from 'lucide-react';
 import { AgentStep } from '@/services/ai/aiService';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <button
+      onClick={handleCopy}
+      className="flex items-center gap-1 text-[10px] font-medium text-zinc-400 hover:text-zinc-200 transition-colors cursor-pointer"
+    >
+      {copied ? (
+        <span className="text-green-500 font-semibold">Copied!</span>
+      ) : (
+        <>
+          <span className="sr-only">Copy</span>
+          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+          </svg>
+        </>
+      )}
+    </button>
+  );
+}
 
 interface Message {
   id: string;
@@ -48,14 +78,70 @@ export default function ChatWindow({ messages, isLoading }: ChatWindowProps) {
 
                 {/* Main Message Bubble */}
                 <div
-                  className={`px-4 py-3 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap shadow-[0_1px_2px_rgba(0,0,0,0.05)]
+                  className={`px-4 py-3 rounded-2xl text-sm leading-relaxed shadow-[0_1px_2px_rgba(0,0,0,0.05)]
                     ${message.role === 'user'
-                      ? 'bg-accent text-white rounded-br-none'
-                      : 'bg-white dark:bg-zinc-800 text-zinc-800 dark:text-zinc-100 border border-zinc-200 dark:border-zinc-700/50 rounded-bl-none'
+                      ? 'bg-accent text-white rounded-br-none whitespace-pre-wrap'
+                      : 'bg-white dark:bg-zinc-800 text-zinc-800 dark:text-zinc-100 border border-zinc-200 dark:border-zinc-700/50 rounded-bl-none w-full'
                     }
                   `}
                 >
-                  {message.content}
+                  {message.role === 'user' ? (
+                    message.content
+                  ) : (
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
+                      components={{
+                        p: ({ node, ...props }) => <p className="mb-2 last:mb-0 text-sm leading-relaxed" {...props} />,
+                        h1: ({ node, ...props }) => <h1 className="text-base font-serif font-bold my-2 text-zinc-900 dark:text-white" {...props} />,
+                        h2: ({ node, ...props }) => <h2 className="text-sm font-serif font-bold my-2 text-zinc-900 dark:text-white" {...props} />,
+                        h3: ({ node, ...props }) => <h3 className="text-xs font-serif font-bold my-1 text-zinc-900 dark:text-white" {...props} />,
+                        ul: ({ node, ...props }) => <ul className="list-disc pl-4 mb-2 space-y-1 text-sm text-zinc-700 dark:text-zinc-300" {...props} />,
+                        ol: ({ node, ...props }) => <ol className="list-decimal pl-4 mb-2 space-y-1 text-sm text-zinc-700 dark:text-zinc-300" {...props} />,
+                        li: ({ node, ...props }) => <li className="leading-relaxed" {...props} />,
+                        table: ({ node, ...props }) => (
+                          <div className="overflow-x-auto my-3 border border-zinc-200 dark:border-zinc-700 rounded-lg">
+                            <table className="min-w-full divide-y divide-zinc-200 dark:divide-zinc-700 text-left text-xs" {...props} />
+                          </div>
+                        ),
+                        thead: ({ node, ...props }) => <thead className="bg-zinc-50 dark:bg-zinc-800/50 text-zinc-700 dark:text-zinc-300 font-semibold" {...props} />,
+                        tbody: ({ node, ...props }) => <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800 text-zinc-600 dark:text-zinc-400" {...props} />,
+                        tr: ({ node, ...props }) => <tr className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/20 transition-colors" {...props} />,
+                        th: ({ node, ...props }) => <th className="px-3 py-2 font-medium tracking-wider" {...props} />,
+                        td: ({ node, ...props }) => <td className="px-3 py-2 whitespace-normal break-words" {...props} />,
+                        code: ({ className, children, ...props }) => {
+                          const match = /language-(\w+)/.exec(className || '');
+                          const lang = match ? match[1] : '';
+                          const isInline = !className;
+                          
+                          if (isInline) {
+                            return (
+                              <code className="px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800/80 text-accent font-mono text-xs font-semibold" {...props}>
+                                {children}
+                              </code>
+                            );
+                          }
+
+                          return (
+                            <div className="relative my-3 border border-zinc-200 dark:border-zinc-700 rounded-xl overflow-hidden shadow-sm bg-zinc-950 text-zinc-100 font-mono text-xs w-full">
+                              <div className="flex items-center justify-between px-4 py-2 bg-zinc-900 border-b border-zinc-800 select-none">
+                                <span className="text-[10px] uppercase font-semibold text-zinc-400 tracking-wider">
+                                  {lang || 'code'}
+                                </span>
+                                <CopyButton text={String(children).replace(/\n$/, '')} />
+                              </div>
+                              <pre className="p-4 overflow-x-auto leading-relaxed scrollbar-thin select-text">
+                                <code className={`language-${lang}`}>
+                                  {children}
+                                </code>
+                              </pre>
+                            </div>
+                          );
+                        }
+                      }}
+                    >
+                      {message.content}
+                    </ReactMarkdown>
+                  )}
                 </div>
               </div>
 
