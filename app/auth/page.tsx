@@ -10,8 +10,15 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 
 export default function AuthPage() {
-  const { login, signUp, redirectPath } = useAuth();
+  const { isAuthenticated, login, signUp, redirectPath } = useAuth();
   const router = useRouter();
+
+  // Redirect if already authenticated
+  React.useEffect(() => {
+    if (isAuthenticated) {
+      router.push(redirectPath || "/");
+    }
+  }, [isAuthenticated, router, redirectPath]);
 
   // State values for Login and Signup
   const [loginEmail, setLoginEmail] = useState("");
