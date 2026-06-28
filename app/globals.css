@@ -170,41 +170,6 @@
   --ring: var(--accent);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg-0: #212121;
-    --bg-000: #212121;
-    --bg-100: #262624;
-    --bg-200: #30302E;
-    --bg-300: #454540;
-    --text-100: #ECECEC;
-    --text-200: #E1E1E0;
-    --text-300: #B4B4B4;
-    --text-400: #8A8A88;
-    --text-500: #6B6B65;
-    --accent: #D2996E;
-    --accent-hover: #E5AA7F;
-
-    --background: var(--bg-0);
-    --foreground: var(--text-100);
-    --card: var(--bg-100);
-    --card-foreground: var(--text-100);
-    --popover: var(--bg-100);
-    --popover-foreground: var(--text-100);
-    --primary: var(--text-100);
-    --primary-foreground: var(--bg-0);
-    --secondary: var(--bg-200);
-    --secondary-foreground: var(--text-100);
-    --muted: var(--bg-200);
-    --muted-foreground: var(--text-400);
-    --accent-bg: var(--accent);
-    --accent-foreground: var(--bg-0);
-    --destructive: oklch(0.704 0.191 22.216);
-    --border: var(--bg-300);
-    --input: var(--bg-300);
-    --ring: var(--accent);
-  }
-}
 
 @layer base {
   * {

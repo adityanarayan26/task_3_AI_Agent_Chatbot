@@ -1,6 +1,6 @@
 import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { LogOut, MessageSquare, Plus, User, Bot } from 'lucide-react';
+import { LogOut, MessageSquare, Plus, User, Bot, Sun, Moon } from 'lucide-react';
 
 interface SidebarProps {
   sessions: { id: string; title: string }[];
@@ -16,6 +16,34 @@ export default function Sidebar({
   onCreateSession
 }: SidebarProps) {
   const { user, logout } = useAuth();
+  const [isDark, setIsDark] = React.useState(false);
+
+  React.useEffect(() => {
+    // Initial check on mount
+    const isDarkTheme = document.documentElement.classList.contains('dark') || 
+                        localStorage.getItem('theme') === 'dark' ||
+                        window.matchMedia('(prefers-color-scheme: dark)').matches;
+    setIsDark(isDarkTheme);
+    if (isDarkTheme) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+    }
+  }, []);
+
+  const toggleTheme = () => {
+    const nextDark = !isDark;
+    setIsDark(nextDark);
+    if (nextDark) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+    }
+  };
 
   return (
     <aside className="w-80 h-screen bg-zinc-950 border-r border-zinc-800 flex flex-col p-4 font-sans select-none shrink-0 text-zinc-300">
@@ -83,9 +111,18 @@ export default function Sidebar({
           </div>
         </div>
 
+        {/* Toggle Theme Button */}
+        <button
+          onClick={toggleTheme}
+          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-medium hover:bg-zinc-900 text-zinc-400 hover:text-white transition-colors cursor-pointer"
+        >
+          {isDark ? <Sun className="w-4 h-4 shrink-0 text-amber-400" /> : <Moon className="w-4 h-4 shrink-0 text-indigo-400" />}
+          <span>{isDark ? 'Light Theme' : 'Dark Theme'}</span>
+        </button>
+
         <button
           onClick={logout}
-          className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-colors cursor-pointer"
+          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-medium text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-colors cursor-pointer"
         >
           <LogOut className="w-4 h-4 shrink-0" />
           <span>Sign Out</span>
