@@ -1,7 +1,6 @@
-import { GoogleGenAI, Type } from '@google/genai';
+import { GoogleGenAI } from '@google/genai';
 import OpenAI from 'openai';
-import { BrowserService } from '../browser/browserService';
-import { codingTool } from '../../lib/tools/coding/codingTool';
+import { ToolRegistry } from '../../lib/tools/registry';
 
 export interface AgentStep {
   type: 'thought' | 'tool_call' | 'tool_result' | 'error';
@@ -17,12 +16,6 @@ export interface ChatResponse {
 }
 
 export class AiService {
-  private browserService: BrowserService;
-
-  constructor() {
-    this.browserService = new BrowserService();
-  }
-
   /**
    * Main entry point to orchestrate agent reasoning loop.
    */
@@ -78,72 +71,8 @@ export class AiService {
       while (loopCount < maxLoops) {
         loopCount++;
         
-        // Define tool declarations
-        const toolDeclarations: any[] = [
-          {
-            name: 'web_search',
-            description: 'Search the web using DuckDuckGo and retrieve matching titles, descriptions, and links.',
-            parameters: {
-              type: Type.OBJECT,
-              properties: {
-                query: { type: Type.STRING, description: 'The search query.' }
-              },
-              required: ['query']
-            }
-          },
-          {
-            name: 'web_scrape',
-            description: 'Scrape a website to read its main text content and take a screenshot.',
-            parameters: {
-              type: Type.OBJECT,
-              properties: {
-                url: { type: Type.STRING, description: 'The absolute URL to scrape.' }
-              },
-              required: ['url']
-            }
-          },
-          {
-            name: 'deep_research',
-            description: 'Perform an exhaustive multi-step research loop about a topic, doing multiple searches and page scrapings, returning a markdown comparison summary.',
-            parameters: {
-              type: Type.OBJECT,
-              properties: {
-                topic: { type: Type.STRING, description: 'The topic or query to research in detail.' }
-              },
-              required: ['topic']
-            }
-          },
-          {
-            name: 'coding_assistant',
-            description: 'Generate, debug, explain, or refactor code. Use this whenever the user asks for code creation, explanation, debugging, or project layouts.',
-            parameters: {
-              type: Type.OBJECT,
-              properties: {
-                action: {
-                  type: Type.STRING,
-                  description: 'The type of action to perform.',
-                  enum: ['generate', 'debug', 'explain', 'refactor', 'draft_project']
-                },
-                language: { type: Type.STRING, description: 'The programming language of the code.' },
-                code: { type: Type.STRING, description: 'The code content.' },
-                explanation: { type: Type.STRING, description: 'Optional explanation, context, or notes.' },
-                files: {
-                  type: Type.ARRAY,
-                  description: 'List of files with path and content (use for multi-file project drafting).',
-                  items: {
-                    type: Type.OBJECT,
-                    properties: {
-                      path: { type: Type.STRING, description: 'Relative path of the file under the sandbox folder.' },
-                      content: { type: Type.STRING, description: 'Content of the file.' }
-                    },
-                    required: ['path', 'content']
-                  }
-                }
-              },
-              required: ['action', 'language', 'code']
-            }
-          }
-        ];
+        // Define tool declarations dynamically from the modular ToolRegistry
+        const toolDeclarations = ToolRegistry.getToolDeclarations();
 
         // Call Gemini
         const response = await ai.models.generateContent({
@@ -184,6 +113,7 @@ export class AiService {
         // Execute function calls
         for (const call of functionCalls) {
           const { name, args } = call;
+          if (!name) continue;
           
           steps.push({
             type: 'tool_call',
@@ -201,33 +131,10 @@ export class AiService {
           let screenshot: string | undefined;
 
           try {
-            if (name === 'web_search') {
-              const query = (args as any).query;
-              result = await this.browserService.searchDuckDuckGo(query);
-            } else if (name === 'web_scrape') {
-              const url = (args as any).url;
-              const scrapeRes = await this.browserService.scrapeUrl(url);
-              result = {
-                title: scrapeRes.title,
-                url: scrapeRes.url,
-                textContent: scrapeRes.textContent
-              };
-              screenshot = scrapeRes.screenshotBase64;
-            } else if (name === 'deep_research') {
-              const topic = (args as any).topic;
-              result = await this.runDeepResearch(topic, steps);
-            } else if (name === 'coding_assistant') {
-              const codingArgs = args as any;
-              result = await codingTool.execute({
-                action: codingArgs.action,
-                language: codingArgs.language,
-                code: codingArgs.code,
-                explanation: codingArgs.explanation,
-                files: codingArgs.files
-              });
-            } else {
-              result = { error: 'Unknown tool requested.' };
-            }
+            // Execute the tool dynamically using the ToolRegistry
+            const toolResult = await ToolRegistry.executeTool(name, args);
+            result = toolResult.output;
+            screenshot = toolResult.screenshot;
           } catch (toolErr: any) {
             result = { error: `Tool execution failed: ${toolErr.message}` };
           }
@@ -267,41 +174,6 @@ export class AiService {
         content: `Error: ${err.message}. Falling back to OpenRouter...`
       });
       return this.runOpenRouterFallback(userMessage, history, steps);
-    }
-  }
-
-  /**
-   * Executes a multi-stage search and scrape loop to summarize research.
-   */
-  private async runDeepResearch(topic: string, steps: AgentStep[]): Promise<any> {
-    try {
-      // Step A: Search for the topic
-      const searchResults = await this.browserService.searchDuckDuckGo(topic);
-      if (searchResults.length === 0) {
-        return { message: `No search results found for: "${topic}"` };
-      }
-
-      // Step B: Scrape top 2 results
-      const pagesToScrape = searchResults.slice(0, 2);
-      const contents: string[] = [];
-
-      for (const page of pagesToScrape) {
-        const scrapeRes = await this.browserService.scrapeUrl(page.url);
-        contents.push(`
-Source: ${page.title} (${page.url})
-Content:
-${scrapeRes.textContent.slice(0, 3000)}
-------------------------------------`);
-      }
-
-      // Return compiled raw analysis content
-      return {
-        topic,
-        sourcesAnalyzed: pagesToScrape.map(p => ({ title: p.title, url: p.url })),
-        compiledData: contents.join('\n')
-      };
-    } catch (err: any) {
-      return { error: `Deep research sequence failed: ${err.message}` };
     }
   }
 

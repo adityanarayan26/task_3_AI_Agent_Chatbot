@@ -1,15 +1,43 @@
 import fs from 'fs';
 import path from 'path';
+import { Type } from '@google/genai';
+import { AgentTool } from '../types';
 
-export const codingTool = {
+export const codingTool: AgentTool = {
   name: 'coding_assistant',
-  description: 'Helper to format, write, and process generated, debugged, or refactored code blocks and multi-file projects.',
+  description: 'Generate, debug, explain, or refactor code. Use this whenever the user asks for code creation, explanation, debugging, or project layouts.',
+  parameters: {
+    type: Type.OBJECT,
+    properties: {
+      action: {
+        type: Type.STRING,
+        description: 'The type of action to perform.',
+        enum: ['generate', 'debug', 'explain', 'refactor', 'draft_project']
+      },
+      language: { type: Type.STRING, description: 'The programming language of the code.' },
+      code: { type: Type.STRING, description: 'The code content.' },
+      explanation: { type: Type.STRING, description: 'Optional explanation, context, or notes.' },
+      files: {
+        type: Type.ARRAY,
+        description: 'List of files with path and content (use for multi-file project drafting).',
+        items: {
+          type: Type.OBJECT,
+          properties: {
+            path: { type: Type.STRING, description: 'Relative path of the file under the sandbox folder.' },
+            content: { type: Type.STRING, description: 'Content of the file.' }
+          },
+          required: ['path', 'content']
+        }
+      }
+    },
+    required: ['action', 'language', 'code']
+  },
   execute: async (args: {
     action: 'generate' | 'debug' | 'explain' | 'refactor' | 'draft_project';
     language: string;
     code: string;
     explanation?: string;
-    files?: Array<{ path: string; content: string }>; // For multi-file project drafting
+    files?: Array<{ path: string; content: string }>;
   }) => {
     const sandboxDir = path.resolve(process.cwd(), 'sandbox');
     

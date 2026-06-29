@@ -1,8 +1,17 @@
 import { BrowserService } from '@/services/browser/browserService';
+import { Type } from '@google/genai';
+import { AgentTool } from '../types';
 
-export const researchTool = {
+export const researchTool: AgentTool = {
   name: 'deep_research',
-  description: 'Perform an exhaustive deep research loop about a topic by doing multiple searches and page scrapings.',
+  description: 'Perform an exhaustive multi-step research loop about a topic, doing multiple searches and page scrapings, returning a markdown comparison summary.',
+  parameters: {
+    type: Type.OBJECT,
+    properties: {
+      topic: { type: Type.STRING, description: 'The topic or query to research in detail.' }
+    },
+    required: ['topic']
+  },
   execute: async (args: { topic: string }) => {
     const browserService = new BrowserService();
     try {
