@@ -49,8 +49,8 @@ export class AiService {
       
       // Add system instruction depending on thinking mode
       const systemInstruction = isThinkingEnabled
-        ? "You are an advanced Agentic AI helper. Think deeply and step-by-step. Analyze all information carefully. You have tools available: web_search, web_scrape, and deep_research. Call tools as needed to fetch real-time information before finalizing your answer."
-        : "You are an Agentic AI helper. Answer questions. If you need real-time or external data, use the appropriate tools: web_search, web_scrape, or deep_research.";
+        ? "You are an advanced Agentic AI helper with real-time web access. Think deeply and step-by-step. You have tools available: web_search, web_scrape, and deep_research. If the user asks for real-time information (such as weather, news, sports updates, gold prices, etc.), you MUST call the web_search or deep_research tool to fetch this data before finalizing your answer. Never say you cannot access real-time information or fetch live details."
+        : "You are an Agentic AI helper with real-time web access. If the user asks for real-time or external data (such as weather, news, sports updates, gold prices, etc.), you MUST use the appropriate tool (web_search, web_scrape, or deep_research) to fetch this information. Never say you cannot access real-time or live details.";
 
       // Convert history
       history.forEach(msg => {
