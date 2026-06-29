@@ -195,7 +195,7 @@ export class AiService {
       };
     }
 
-    const orModel = process.env.OPENROUTER_MODEL || 'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free';
+    const orModel = process.env.OPENROUTER_MODEL || 'openrouter/free';
 
     steps.push({
       type: 'thought',
@@ -214,7 +214,7 @@ export class AiService {
       // System instruction
       messages.push({
         role: 'system',
-        content: 'You are a helpful AI assistant. Answer the user\'s questions to the best of your ability.'
+        content: "You are an Agentic AI helper with real-time web access. If the user asks for real-time or external data (such as weather, news, sports updates, gold prices, etc.), you MUST use the appropriate tool (web_search, web_scrape, or deep_research) to fetch this information. Never say you cannot access real-time or live details."
       });
 
       // User history
@@ -231,16 +231,106 @@ export class AiService {
         content: userMessage
       });
 
-      const completion = await openai.chat.completions.create({
-        model: orModel,
-        messages
-      });
+      // Convert tool declarations to OpenAI format
+      const orTools = ToolRegistry.getToolDeclarations().map(tool => ({
+        type: 'function' as const,
+        function: {
+          name: tool.name,
+          description: tool.description,
+          parameters: tool.parameters
+        }
+      }));
 
-      const answer = completion.choices[0]?.message?.content || 'Empty response received from OpenRouter.';
+      let loopCount = 0;
+      const maxLoops = 5;
+      let finalAnswer = '';
+
+      while (loopCount < maxLoops) {
+        loopCount++;
+
+        const completion = await openai.chat.completions.create({
+          model: orModel,
+          messages,
+          tools: orTools
+        });
+
+        const responseMessage = completion.choices[0]?.message;
+        if (!responseMessage) {
+          finalAnswer = 'Empty response received from OpenRouter.';
+          break;
+        }
+
+        // If the model output text thought
+        if (responseMessage.content) {
+          finalAnswer = responseMessage.content;
+          steps.push({
+            type: 'thought',
+            title: `Thought (Fallback Step ${loopCount})`,
+            content: responseMessage.content
+          });
+        }
+
+        const toolCalls = responseMessage.tool_calls;
+
+        // If no tool calls, we are done
+        if (!toolCalls || toolCalls.length === 0) {
+          break;
+        }
+
+        // Push assistant response (containing tool calls) to messages
+        messages.push({
+          role: 'assistant',
+          content: responseMessage.content || '',
+          tool_calls: toolCalls
+        });
+
+        for (const tc of toolCalls) {
+          const toolCall = tc as any;
+          const { name } = toolCall.function;
+          let args: any;
+          try {
+            args = JSON.parse(toolCall.function.arguments);
+          } catch (e) {
+            args = {};
+          }
+
+          steps.push({
+            type: 'tool_call',
+            title: `Running Tool: ${name}`,
+            content: `Arguments: ${JSON.stringify(args, null, 2)}`
+          });
+
+          let result: any;
+          let screenshot: string | undefined;
+
+          try {
+            const toolResult = await ToolRegistry.executeTool(name, args);
+            result = toolResult.output;
+            screenshot = toolResult.screenshot;
+          } catch (toolErr: any) {
+            result = { error: `Tool execution failed: ${toolErr.message}` };
+          }
+
+          steps.push({
+            type: 'tool_result',
+            title: `Tool Result: ${name}`,
+            content: JSON.stringify(result, null, 2),
+            screenshot
+          });
+
+          // Add tool output to messages
+          messages.push({
+            role: 'tool',
+            tool_call_id: toolCall.id,
+            name: name,
+            content: JSON.stringify(result)
+          });
+        }
+      }
 
       return {
         success: true,
-        response: answer,
+        response: finalAnswer || "Processing complete.",
         steps
       };
     } catch (error: any) {
