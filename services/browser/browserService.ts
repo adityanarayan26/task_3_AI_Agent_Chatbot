@@ -18,6 +18,15 @@ export class BrowserService {
    * Performs a query search on DuckDuckGo using Playwright and parses results.
    */
   async searchDuckDuckGo(query: string): Promise<SearchResult[]> {
+    let results = await this.queryDuckDuckGoDirect(query);
+    if (results.length === 0) {
+      console.log('DuckDuckGo search returned 0 results. Falling back to Bing Search...');
+      results = await this.queryBingDirect(query);
+    }
+    return results;
+  }
+
+  private async queryDuckDuckGoDirect(query: string): Promise<SearchResult[]> {
     const browser = await chromium.launch({ headless: true });
     const page = await browser.newPage();
     try {
@@ -40,7 +49,57 @@ export class BrowserService {
 
       return results.filter(r => r.title && r.url);
     } catch (error: any) {
-      console.error('Error during DuckDuckGo search:', error.message);
+      console.error('Error during DuckDuckGo direct search:', error.message);
+      return [];
+    } finally {
+      await browser.close();
+    }
+  }
+
+  private async queryBingDirect(query: string): Promise<SearchResult[]> {
+    const browser = await chromium.launch({ headless: true });
+    const context = await browser.newContext({
+      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    });
+    const page = await context.newPage();
+    try {
+      const url = `https://www.bing.com/search?q=${encodeURIComponent(query)}`;
+      await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 15000 });
+      
+      const results = await page.evaluate(() => {
+        const items = Array.from(document.querySelectorAll('li.b_algo'));
+        return items.slice(0, 5).map(item => {
+          const titleEl = item.querySelector('h2 a');
+          const snippetEl = item.querySelector('div.b_caption p, p');
+          return {
+            title: titleEl?.textContent?.trim() || '',
+            url: (titleEl as HTMLAnchorElement)?.href || '',
+            snippet: snippetEl?.textContent?.trim() || ''
+          };
+        });
+      });
+      
+      const filtered = results.filter(r => r.title && r.url);
+      
+      // Clean Bing redirection URLs
+      return filtered.map(r => {
+        try {
+          const parsed = new URL(r.url);
+          const uParam = parsed.searchParams.get('u');
+          if (uParam && uParam.length > 2) {
+            const base64Part = uParam.slice(2);
+            const decoded = Buffer.from(base64Part, 'base64').toString('utf8');
+            if (decoded.startsWith('http://') || decoded.startsWith('https://')) {
+              return { ...r, url: decoded };
+            }
+          }
+        } catch (e) {
+          // Ignore error and return original URL
+        }
+        return r;
+      });
+    } catch (error: any) {
+      console.error('Error during Bing fallback search:', error.message);
       return [];
     } finally {
       await browser.close();
