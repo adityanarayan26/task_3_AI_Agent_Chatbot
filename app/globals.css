@@ -96,21 +96,22 @@
   --color-border: var(--bg-300);
   --color-input: var(--bg-300);
   --color-ring: var(--accent);
+  --color-accent: var(--accent);
 }
 
 :root {
-  --bg-0: #FAF9F5;
-  --bg-000: #FAF9F5;
+  --bg-0: #FAF8F5; /* Soft Champagne/Alabaster Linen */
+  --bg-000: #FAF8F5;
   --bg-100: #FFFFFF;
-  --bg-200: #F0EEE6;
-  --bg-300: #DDDDDD;
-  --text-100: #1F1E1D;
-  --text-200: #3D3D3A;
-  --text-300: #73726C;
-  --text-400: #888888;
-  --text-500: #999999;
-  --accent: #D97757;
-  --accent-hover: #C6613F;
+  --bg-200: #F2ECE4; /* Cashmere Cash/Sand */
+  --bg-300: #E5DAC9; /* Oatmeal/Border */
+  --text-100: #28231E; /* Dark Coffee Bean */
+  --text-200: #4B4239;
+  --text-300: #7D7266;
+  --text-400: #9C8F80;
+  --text-500: #B7AA9C;
+  --accent: #C87A53; /* Sienna Terracotta */
+  --accent-hover: #A8613C;
   --radius: 0.5rem;
   --ease-silk: cubic-bezier(0.2, 0.0, 0, 1.0);
 
@@ -136,18 +137,18 @@
 }
 
 .dark {
-  --bg-0: #212121;
-  --bg-000: #212121;
-  --bg-100: #262624;
-  --bg-200: #30302E;
-  --bg-300: #454540;
-  --text-100: #ECECEC;
-  --text-200: #E1E1E0;
-  --text-300: #B4B4B4;
-  --text-400: #8A8A88;
-  --text-500: #6B6B65;
-  --accent: #D2996E;
-  --accent-hover: #E5AA7F;
+  --bg-0: #141018; /* Luxurious Deep Fig Plum */
+  --bg-000: #141018;
+  --bg-100: #1C1622;
+  --bg-200: #261E2E;
+  --bg-300: #382C43;
+  --text-100: #EFEBF4; /* Warm Pearl */
+  --text-200: #DBD3E3;
+  --text-300: #C4B9D0;
+  --text-400: #9F8EAF;
+  --text-500: #7B688D;
+  --accent: #E2A478; /* Soft Rose Copper */
+  --accent-hover: #DDA15E;
 
   /* Fallbacks for shadcn tools (dark mode) */
   --background: var(--bg-0);
@@ -200,3 +201,100 @@
 .animate-fade-in {
   animation: fadeIn 0.3s cubic-bezier(0.2, 0.0, 0, 1.0) forwards;
 }
+
+/* VS Code Dark+ Theme for PrismJS Syntax Highlighting */
+.vs-code-theme pre,
+pre[class*="language-"] {
+  background: #1e1e1e !important;
+  color: #d4d4d4 !important;
+}
+
+.vs-code-theme .token.comment,
+.vs-code-theme .token.prolog,
+.vs-code-theme .token.doctype,
+.vs-code-theme .token.cdata {
+  color: #6a9955 !important; /* Green for comments */
+  font-style: italic !important;
+}
+
+.vs-code-theme .token.punctuation {
+  color: #d4d4d4 !important; /* Off-white */
+}
+
+.vs-code-theme .token.property,
+.vs-code-theme .token.tag,
+.vs-code-theme .token.boolean,
+.vs-code-theme .token.number,
+.vs-code-theme .token.constant,
+.vs-code-theme .token.symbol,
+.vs-code-theme .token.deleted {
+  color: #b5cea8 !important; /* Light green for numbers, constants */
+}
+
+.vs-code-theme .token.selector,
+.vs-code-theme .token.attr-name,
+.vs-code-theme .token.string,
+.vs-code-theme .token.char,
+.vs-code-theme .token.builtin,
+.vs-code-theme .token.inserted {
+  color: #ce9178 !important; /* Orange-brown for strings */
+}
+
+.vs-code-theme .token.operator,
+.vs-code-theme .token.entity,
+.vs-code-theme .token.url,
+.vs-code-theme .language-css .token.string,
+.vs-code-theme .style .token.string {
+  color: #d4d4d4 !important;
+}
+
+.vs-code-theme .token.atrule,
+.vs-code-theme .token.attr-value,
+.vs-code-theme .token.keyword {
+  color: #569cd6 !important; /* Blue for keywords */
+}
+
+.vs-code-theme .token.function {
+  color: #dcdcaa !important; /* Yellow for functions */
+}
+
+.vs-code-theme .token.class-name {
+  color: #4ec9b0 !important; /* Greenish-blue for classes */
+}
+
+.vs-code-theme .token.regex,
+.vs-code-theme .token.important,
+.vs-code-theme .token.variable {
+  color: #9cdcfe !important; /* Light blue for variables/properties */
+}
+
+.vs-code-theme .token.property {
+  color: #9cdcfe !important; /* Light blue for property names */
+}
+
+/* Accent Color Overrides to Bypass Shadcn HSL Mappings */
+.bg-accent {
+  background-color: var(--accent) !important;
+}
+.text-accent {
+  color: var(--accent) !important;
+}
+.bg-accent\/10 {
+  background-color: rgba(200, 122, 83, 0.1) !important; /* light mode fallback alpha */
+}
+.dark .bg-accent\/10 {
+  background-color: rgba(226, 164, 120, 0.1) !important; /* dark mode fallback alpha */
+}
+.bg-accent\/30 {
+  background-color: rgba(200, 122, 83, 0.3) !important;
+}
+.dark .bg-accent\/30 {
+  background-color: rgba(226, 164, 120, 0.3) !important;
+}
+.bg-accent\/15 {
+  background-color: rgba(200, 122, 83, 0.15) !important;
+}
+.dark .bg-accent\/15 {
+  background-color: rgba(226, 164, 120, 0.15) !important;
+}
+

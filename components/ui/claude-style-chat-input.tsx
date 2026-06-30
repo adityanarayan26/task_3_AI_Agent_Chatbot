@@ -56,6 +56,7 @@ export interface AttachedFile {
     preview: string | null;
     uploadStatus: string;
     content?: string;
+    base64?: string;
 }
 
 interface FilePreviewCardProps {
@@ -203,7 +204,7 @@ export const ClaudeChatInput: React.FC<ClaudeChatInputProps> = ({ onSendMessage 
             return {
                 id: Math.random().toString(36).substr(2, 9),
                 file,
-                type: isImage ? 'image/unknown' : (file.type || 'application/octet-stream'),
+                type: isImage ? (file.type || 'image/png') : (file.type || 'application/octet-stream'),
                 preview: isImage ? URL.createObjectURL(file) : null,
                 uploadStatus: 'pending'
             };
@@ -224,9 +225,15 @@ export const ClaudeChatInput: React.FC<ClaudeChatInputProps> = ({ onSendMessage 
         });
 
         newFiles.forEach(f => {
-            setTimeout(() => {
-                setFiles(prev => prev.map(p => p.id === f.id ? { ...p, uploadStatus: 'complete' } : p));
-            }, 800 + Math.random() * 1000);
+            const reader = new FileReader();
+            reader.onload = () => {
+                const base64String = (reader.result as string).split(',')[1];
+                setFiles(prev => prev.map(p => p.id === f.id ? { ...p, uploadStatus: 'complete', base64: base64String } : p));
+            };
+            reader.onerror = () => {
+                setFiles(prev => prev.map(p => p.id === f.id ? { ...p, uploadStatus: 'error' } : p));
+            };
+            reader.readAsDataURL(f.file);
         });
     }, []);
 

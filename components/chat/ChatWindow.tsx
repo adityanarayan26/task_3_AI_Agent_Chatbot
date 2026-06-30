@@ -3,6 +3,20 @@ import { Bot, User, ChevronDown, ChevronRight, Terminal, Eye, EyeOff, Search, Fi
 import { AgentStep } from '@/services/ai/aiService';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import Prism from 'prismjs';
+
+// Import PrismJS languages
+import 'prismjs/components/prism-markup';
+import 'prismjs/components/prism-css';
+import 'prismjs/components/prism-clike';
+import 'prismjs/components/prism-javascript';
+import 'prismjs/components/prism-typescript';
+import 'prismjs/components/prism-jsx';
+import 'prismjs/components/prism-tsx';
+import 'prismjs/components/prism-python';
+import 'prismjs/components/prism-json';
+import 'prismjs/components/prism-bash';
+
 
 function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
@@ -121,18 +135,43 @@ export default function ChatWindow({ messages, isLoading }: ChatWindowProps) {
                             );
                           }
 
+                          const rawCode = String(children).replace(/\n$/, '');
+                          
+                          // Run Prism syntax highlighting
+                          let highlightedHtml = rawCode;
+                          let hasHighlighting = false;
+                          
+                          if (lang) {
+                            const prismLang = Prism.languages[lang.toLowerCase()];
+                            if (prismLang) {
+                              try {
+                                highlightedHtml = Prism.highlight(rawCode, prismLang, lang);
+                                hasHighlighting = true;
+                              } catch (e) {
+                                console.warn('Prism highlighting failed:', e);
+                              }
+                            }
+                          }
+
                           return (
-                            <div className="relative my-3 border border-zinc-200 dark:border-zinc-700 rounded-xl overflow-hidden shadow-sm bg-zinc-950 text-zinc-100 font-mono text-xs w-full">
+                            <div className="relative my-3 border border-zinc-200 dark:border-zinc-700 rounded-xl overflow-hidden shadow-sm bg-zinc-950 text-zinc-100 font-mono text-xs w-full vs-code-theme">
                               <div className="flex items-center justify-between px-4 py-2 bg-zinc-900 border-b border-zinc-800 select-none">
                                 <span className="text-[10px] uppercase font-semibold text-zinc-400 tracking-wider">
                                   {lang || 'code'}
                                 </span>
-                                <CopyButton text={String(children).replace(/\n$/, '')} />
+                                <CopyButton text={rawCode} />
                               </div>
                               <pre className="p-4 overflow-x-auto leading-relaxed scrollbar-thin select-text">
-                                <code className={`language-${lang}`}>
-                                  {children}
-                                </code>
+                                {hasHighlighting ? (
+                                  <code 
+                                    className={`language-${lang}`} 
+                                    dangerouslySetInnerHTML={{ __html: highlightedHtml }} 
+                                  />
+                                ) : (
+                                  <code className={`language-${lang}`}>
+                                    {children}
+                                  </code>
+                                )}
                               </pre>
                             </div>
                           );

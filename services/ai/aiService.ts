@@ -23,20 +23,21 @@ export class AiService {
     userMessage: string,
     history: any[] = [],
     isThinkingEnabled: boolean = false,
-    selectedModel: 'gemini' | 'openrouter' = 'gemini'
+    selectedModel: 'gemini' | 'openrouter' = 'gemini',
+    files?: Array<{ name: string; type: string; base64?: string }>
   ): Promise<ChatResponse> {
     const steps: AgentStep[] = [];
     const geminiKey = process.env.GEMINI_API_KEY;
 
     // Check if user selected OpenRouter directly
     if (selectedModel === 'openrouter') {
-      return this.runOpenRouterFallback(userMessage, history, steps);
+      return this.runOpenRouterFallback(userMessage, history, steps, files);
     }
 
     // Check if Gemini key is available
     if (!geminiKey || geminiKey.includes('your_gemini')) {
       console.warn('Gemini API key missing. Falling back directly to OpenRouter.');
-      return this.runOpenRouterFallback(userMessage, history, steps);
+      return this.runOpenRouterFallback(userMessage, history, steps, files);
     }
 
     try {
@@ -61,8 +62,22 @@ export class AiService {
         }
       });
 
-      // Add new user prompt
-      chatHistory.push({ role: 'user', parts: [{ text: userMessage }] });
+      // Add new user prompt with optional files/images
+      const userParts: any[] = [{ text: userMessage }];
+      
+      if (files && files.length > 0) {
+        files.forEach(file => {
+          if (file.base64 && file.type.startsWith('image/')) {
+            userParts.push({
+              inlineData: {
+                mimeType: file.type,
+                data: file.base64
+              }
+            });
+          }
+        });
+      }
+      chatHistory.push({ role: 'user', parts: userParts });
 
       let loopCount = 0;
       const maxLoops = 5;
@@ -92,14 +107,15 @@ export class AiService {
             title: `Thought (Step ${loopCount})`,
             content: response.text
           });
-          // Add thought to history so Gemini knows its own thoughts in subsequent turns
-          chatHistory.push({ role: 'model', parts: [{ text: response.text }] });
         }
 
         const functionCalls = response.functionCalls;
 
         // If no more tool calls, we are done
         if (!functionCalls || functionCalls.length === 0) {
+          if (response.text) {
+            chatHistory.push({ role: 'model', parts: [{ text: response.text }] });
+          }
           if (!response.text && finalResponseText) {
             // Use last saved response text
           } else if (response.text) {
@@ -110,21 +126,34 @@ export class AiService {
           break;
         }
 
-        // Execute function calls
+        // We have function calls! Group thoughts (if any) and function calls in a single model turn.
+        const modelParts: any[] = [];
+        if (response.text) {
+          modelParts.push({ text: response.text });
+        }
+        
+        for (const call of functionCalls) {
+          modelParts.push({
+            functionCall: { name: call.name, args: call.args }
+          });
+        }
+        
+        chatHistory.push({
+          role: 'model',
+          parts: modelParts
+        });
+
+        // Now execute all calls in parallel/sequence and build a single tool response turn
+        const toolResponseParts: any[] = [];
+        
         for (const call of functionCalls) {
           const { name, args } = call;
           if (!name) continue;
-          
+
           steps.push({
             type: 'tool_call',
             title: `Running Tool: ${name}`,
             content: `Arguments: ${JSON.stringify(args, null, 2)}`
-          });
-
-          // Add function call to chat history
-          chatHistory.push({
-            role: 'model',
-            parts: [{ functionCall: { name, args } }]
           });
 
           let result: any;
@@ -147,17 +176,19 @@ export class AiService {
             screenshot
           });
 
-          // Add function response to chat history
-          chatHistory.push({
-            role: 'tool',
-            parts: [{
-              functionResponse: {
-                name,
-                response: { output: result }
-              }
-            }]
+          toolResponseParts.push({
+            functionResponse: {
+              name,
+              response: { output: result }
+            }
           });
         }
+
+        // Push all responses as parts of a single tool turn
+        chatHistory.push({
+          role: 'tool',
+          parts: toolResponseParts
+        });
       }
 
       return {
@@ -173,7 +204,7 @@ export class AiService {
         title: 'Gemini Error',
         content: `Error: ${err.message}. Falling back to OpenRouter...`
       });
-      return this.runOpenRouterFallback(userMessage, history, steps);
+      return this.runOpenRouterFallback(userMessage, history, steps, files);
     }
   }
 
@@ -183,7 +214,8 @@ export class AiService {
   private async runOpenRouterFallback(
     userMessage: string,
     history: any[],
-    steps: AgentStep[]
+    steps: AgentStep[],
+    files?: Array<{ name: string; type: string; base64?: string }>
   ): Promise<ChatResponse> {
     const orKey = process.env.OPENROUTER_API_KEY;
 
@@ -225,10 +257,25 @@ export class AiService {
         });
       });
 
-      // New prompt
+      // New prompt with optional files/images
+      const contentParts: any[] = [{ type: 'text', text: userMessage }];
+      
+      if (files && files.length > 0) {
+        files.forEach(file => {
+          if (file.base64 && file.type.startsWith('image/')) {
+            contentParts.push({
+              type: 'image_url',
+              image_url: {
+                url: `data:${file.type};base64,${file.base64}`
+              }
+            });
+          }
+        });
+      }
+      
       messages.push({
         role: 'user',
-        content: userMessage
+        content: contentParts
       });
 
       // Convert tool declarations to OpenAI format

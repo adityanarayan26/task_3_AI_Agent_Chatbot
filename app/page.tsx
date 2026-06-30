@@ -7,7 +7,7 @@ import ClaudeChatInput, { AttachedFile } from '@/components/ui/claude-style-chat
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { handleChatRequest } from '@/app/actions';
-import { Loader2 } from 'lucide-react';
+import { Loader2, PanelLeftOpen } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 
 interface Message {
@@ -32,6 +32,7 @@ export default function HomePage() {
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [authChecking, setAuthChecking] = useState(true);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   // Auth Redirect Guard
   useEffect(() => {
@@ -255,7 +256,8 @@ export default function HomePage() {
         data.message,
         currentSession.messages, // pass current history
         data.isThinkingEnabled,
-        data.selectedModel
+        data.selectedModel,
+        data.files.map(f => ({ name: f.file.name, type: f.type, base64: f.base64 }))
       );
 
       // Create assistant response message object
@@ -329,17 +331,30 @@ export default function HomePage() {
   }
 
   return (
-    <div className="flex h-screen w-full bg-zinc-900 overflow-hidden">
+    <div className="flex h-screen w-full bg-[#141018] overflow-hidden">
       {/* Sidebar Navigation */}
       <Sidebar
         sessions={sessions}
         activeSessionId={activeSessionId}
         onSelectSession={handleSelectSession}
         onCreateSession={handleCreateSession}
+        isCollapsed={isSidebarCollapsed}
+        onToggleCollapse={() => setIsSidebarCollapsed(true)}
       />
 
       {/* Main Chat Area Workspace */}
       <div className="flex-1 flex flex-col h-full overflow-hidden relative">
+        {/* Floating Expand Sidebar Button */}
+        {isSidebarCollapsed && (
+          <button
+            onClick={() => setIsSidebarCollapsed(false)}
+            className="absolute top-4 left-4 z-30 p-2.5 bg-[#1C1622] border border-[#382C43] rounded-xl text-[#C4B9D0] hover:bg-[#261E2E] hover:text-white transition-all shadow-md cursor-pointer active:scale-95 flex items-center justify-center"
+            title="Expand sidebar"
+          >
+            <PanelLeftOpen className="w-4 h-4" />
+          </button>
+        )}
+
         {/* Chat Messages Stream */}
         <ChatWindow
           messages={activeSession ? activeSession.messages : []}

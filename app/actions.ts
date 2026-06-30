@@ -9,11 +9,12 @@ export async function handleChatRequest(
   userMessage: string,
   history: any[],
   isThinkingEnabled: boolean,
-  selectedModel: 'gemini' | 'openrouter'
+  selectedModel: 'gemini' | 'openrouter',
+  files?: Array<{ name: string; type: string; base64?: string }>
 ): Promise<ChatResponse> {
   try {
     const aiService = new AiService();
-    return await aiService.generateText(userMessage, history, isThinkingEnabled, selectedModel);
+    return await aiService.generateText(userMessage, history, isThinkingEnabled, selectedModel, files);
   } catch (error: any) {
     console.error('Server Action Chat Request Error:', error.message);
     return {
