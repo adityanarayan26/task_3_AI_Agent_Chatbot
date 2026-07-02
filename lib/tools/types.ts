@@ -1,4 +1,4 @@
-import { Type, Schema } from '@google/genai';
+import { Schema } from '@google/genai';
 
 export interface ToolExecuteResult {
   output: unknown;

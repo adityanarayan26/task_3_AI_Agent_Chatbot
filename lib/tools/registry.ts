@@ -3,13 +3,15 @@ import { searchTool } from './browser/searchTool';
 import { scrapeTool } from './browser/scrapeTool';
 import { researchTool } from './deep-research/researchTool';
 import { codingTool } from './coding/codingTool';
+import { imageTool } from './image/imageTool';
 
 // List of all registered tools
 const registeredTools: AgentTool[] = [
   searchTool,
   scrapeTool,
   researchTool,
-  codingTool
+  codingTool,
+  imageTool
 ];
 
 export class ToolRegistry {

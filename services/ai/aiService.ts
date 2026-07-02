@@ -1,6 +1,7 @@
 import { GoogleGenAI } from '@google/genai';
 import OpenAI from 'openai';
 import { ToolRegistry } from '../../lib/tools/registry';
+import { extractDocumentText } from '../../lib/utils/documentParser';
 
 export interface AgentStep {
   type: 'thought' | 'tool_call' | 'tool_result' | 'error';
@@ -66,6 +67,12 @@ export interface OpenRouterToolCall {
   };
 }
 
+const BASE_SYSTEM_INSTRUCTION = "You are an advanced Agentic AI helper with real-time web access and multimodal processing capabilities. " +
+  "You have tools available: web_search, web_scrape, deep_research, and image_generator. " +
+  "1. Real-Time Data: If the user asks for real-time or external data (such as weather, news, sports updates, etc.), you MUST use the appropriate tool (web_search, web_scrape, or deep_research) to fetch this information. Never say you cannot access live details. " +
+  "2. Image Generation: If the user prompts you to generate, create, draw, or paint an image, you MUST call the `image_generator` tool. Once the tool returns the image bytes, you MUST render and display the image directly in your final response using standard markdown image syntax: `![AI Generated Image](data:image/jpeg;base64,<base64_data>)` (replace <base64_data> with the raw imageBytes from the tool response). " +
+  "3. Learning Resources: Whenever the user asks you about any topic, framework, programming language, or concept in detail, you MUST include a dedicated 'Recommended Learning Resources' section at the end of your response. In this section, provide direct, high-quality markdown links to the best learning platforms for that topic (such as Coursera, edX, Udemy, freeCodeCamp, official documentation, YouTube, etc.) along with a brief description of what each offers.";
+
 export class AiService {
   /**
    * Main entry point to orchestrate agent reasoning loop.
@@ -101,8 +108,8 @@ export class AiService {
       
       // Add system instruction depending on thinking mode
       const systemInstruction = isThinkingEnabled
-        ? "You are an advanced Agentic AI helper with real-time web access. Think deeply and step-by-step. You have tools available: web_search, web_scrape, and deep_research. If the user asks for real-time information (such as weather, news, sports updates, gold prices, etc.), you MUST call the web_search or deep_research tool to fetch this data before finalizing your answer. Never say you cannot access real-time information or fetch live details."
-        : "You are an Agentic AI helper with real-time web access. If the user asks for real-time or external data (such as weather, news, sports updates, gold prices, etc.), you MUST use the appropriate tool (web_search, web_scrape, or deep_research) to fetch this information. Never say you cannot access real-time or live details.";
+        ? `${BASE_SYSTEM_INSTRUCTION} Think deeply and step-by-step to formulate your thoughts and execute your plan.`
+        : BASE_SYSTEM_INSTRUCTION;
 
       // Convert history
       history.forEach(msg => {
@@ -113,12 +120,16 @@ export class AiService {
         }
       });
 
-      // Add new user prompt with optional files/images
+      // Add new user prompt with optional files/images/documents
       const userParts: GeminiContentPart[] = [{ text: userMessage }];
-      
+      let documentContext = '';
+
       if (files && files.length > 0) {
         files.forEach(file => {
-          if (file.base64 && file.type.startsWith('image/')) {
+          if (!file.base64) return;
+
+          // If it's an image, pass it natively as inlineData
+          if (file.type.startsWith('image/')) {
             userParts.push({
               inlineData: {
                 mimeType: file.type,
@@ -126,8 +137,27 @@ export class AiService {
               }
             });
           }
+          // If it's a PDF, pass it natively as inlineData
+          else if (file.type === 'application/pdf') {
+            userParts.push({
+              inlineData: {
+                mimeType: file.type,
+                data: file.base64
+              }
+            });
+          }
+          // Otherwise, extract plain-text representation (docx, pptx, xlsx, txt, csv, etc.)
+          else {
+            const extractedText = extractDocumentText(file.name, file.base64, file.type);
+            documentContext += `\n\n[Attached Document: ${file.name}]\n${extractedText}`;
+          }
         });
       }
+
+      if (documentContext) {
+        userParts[0].text = `${userParts[0].text}${documentContext}`;
+      }
+
       chatHistory.push({ role: 'user', parts: userParts });
 
       let loopCount = 0;
@@ -301,7 +331,7 @@ export class AiService {
       // System instruction
       messages.push({
         role: 'system',
-        content: "You are an Agentic AI helper with real-time web access. If the user asks for real-time or external data (such as weather, news, sports updates, gold prices, etc.), you MUST use the appropriate tool (web_search, web_scrape, or deep_research) to fetch this information. Never say you cannot access real-time or live details."
+        content: BASE_SYSTEM_INSTRUCTION
       });
 
       // User history
@@ -312,22 +342,32 @@ export class AiService {
         });
       });
 
-      // New prompt with optional files/images
+      // New prompt with optional files/images/documents
       const contentParts: OpenRouterMessagePart[] = [{ type: 'text', text: userMessage }];
+      let documentContext = '';
       
       if (files && files.length > 0) {
         files.forEach(file => {
-          if (file.base64 && file.type.startsWith('image/')) {
+          if (!file.base64) return;
+
+          if (file.type.startsWith('image/')) {
             contentParts.push({
               type: 'image_url',
               image_url: {
                 url: `data:${file.type};base64,${file.base64}`
               }
             });
+          } else {
+            const extractedText = extractDocumentText(file.name, file.base64, file.type);
+            documentContext += `\n\n[Attached Document: ${file.name}]\n${extractedText}`;
           }
         });
       }
       
+      if (documentContext) {
+        contentParts[0].text = `${contentParts[0].text}${documentContext}`;
+      }
+
       messages.push({
         role: 'user',
         content: contentParts
